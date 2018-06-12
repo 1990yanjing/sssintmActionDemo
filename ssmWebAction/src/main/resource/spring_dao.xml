@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+		http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+		http://www.springframework.org/schema/context
+		http://www.springframework.org/schema/context/spring-context-3.0.xsd
+		http://www.springframework.org/schema/tx
+		http://www.springframework.org/schema/tx/spring-tx-3.0.xsd">
+
+	<import resource="spring_ds.xml" />
+
+	<!-- 配置Bean的扫描机制 -->
+	<context:annotation-config />
+	<context:component-scan
+		base-package="com.wangyan.ssmWebAction.*" />
+
+	<!-- 配置mybatic的sqlSessionFactory -->
+	<bean id="sqlSessionFactory"
+		class="org.mybatis.spring.SqlSessionFactoryBean">
+		<property name="dataSource" ref="mysql_local_ds" />
+	</bean>
+
+	<!-- 配置mapper扫描规则 -->
+	<bean id="mapperScannerConfigurer"
+		class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+		<property name="basePackage"
+			value="com.wangyan.ssmWebAction.mapper" />
+		<property name="sqlSessionFactoryBeanName"
+			value="sqlSessionFactory" />
+		<property name="annotationClass"
+			value="org.springframework.stereotype.Repository" />
+	</bean>
+
+	<!-- 配置事务管理组件 -->
+	<bean id="transactionManager"
+		class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+		<property name="dataSource" ref="mysql_local_ds" />
+	</bean>
+
+	<!-- 采用注解方式：有源码的情况下，将注解加在方法上 -->
+	<!-- 开启事务注解标记@Transactional，当调用带@Transactional标记的方法时，将transactionManager的事务管理功能切入进去 -->
+	<tx:annotation-driven transaction-manager="transactionManager" />
+
+</beans>

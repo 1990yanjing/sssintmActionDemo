@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:int="http://www.springframework.org/schema/integration"
+	xmlns:int-http="http://www.springframework.org/schema/integration/http"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans 
+	http://www.springframework.org/schema/beans/spring-beans.xsd 
+	http://www.springframework.org/schema/integration 
+	http://www.springframework.org/schema/integration/spring-integration.xsd 
+	http://www.springframework.org/schema/integration/http  
+	http://www.springframework.org/schema/integration/http/spring-integration-http.xsd">
+
+	<int:channel id="httpRequestRouterChannel" />
+	<int:channel id="httpResponseChannel" />
+	<int-http:inbound-gateway
+		request-channel="httpRequestRouterChannel"
+		supported-methods="GET,POST" path="/{service}/{method}"
+		reply-channel="httpResponseChannel" reply-timeout="10000"
+		mapped-response-headers="Content-Type">
+		<int-http:header name="service"
+			expression="#pathVariables.service+'.'+#pathVariables.method" />
+		<int-http:header name="content" expression="'json'" />
+	</int-http:inbound-gateway>
+
+	<int:header-value-router header-name="service"
+		resolution-required="false" input-channel="httpRequestRouterChannel"
+		default-output-channel="httpRequestChannel">
+	</int:header-value-router>
+
+	<!-- 请求路由逻辑定义 -->
+	<int:chain input-channel="httpRequestChannel" output-channel="successChannel">
+		<int:gateway request-channel="serviceRouterChannel" />
+	</int:chain>
+	<int:channel id="serviceRouterChannel" />
+	<int:router input-channel="serviceRouterChannel" expression="headers.get('service')+'.Channel'" />
+
+	<int:channel id="successChannel" />
+	<int:chain input-channel="successChannel" output-channel="responseChannel">
+		<int:transformer expression="@resultMessageFactory.createSuccessResult(payload)" />
+	</int:chain>
+
+	<int:channel id="responseChannel" />
+	<int:header-value-router input-channel="responseChannel" header-name="content" default-output-channel="jsonTransferChannel">
+		<int:mapping value="json" channel="jsonTransferChannel" />
+	</int:header-value-router>
+	
+	<int:channel id="jsonTransferChannel" />
+	<int:chain input-channel="jsonTransferChannel" output-channel="httpResponseChannel">
+		<int:object-to-json-transformer content-type="application/json;charset=utf-8" />
+	</int:chain>
+
+	<int:channel id="role.getRole.Channel" />
+	<int:chain input-channel="role.getRole.Channel">
+		<int:service-activator ref="roleController"
+			method="getRole" />
+	</int:chain>
+
+</beans>
